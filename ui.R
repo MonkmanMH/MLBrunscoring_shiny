@@ -55,15 +55,8 @@ shinyUI(navbarPage("MLB run scoring trends",
                    # ---------- end tabPanel "league"
                    #
                    tabPanel("reference",
-                            fluidRow(
-                            ),
-                            column(3,
-                                   img(class="img-polaroid",
-                                       src=paste0("http://upload.wikimedia.org/wikipedia/en/d/dd/Dr._Bunsen_Honeydew.jpg")),
-                                   tags$small(
-                                     "This R programming is brought to you by",
-                                     "the folks at Muppet Labs,",
-                                     "where the future is being made today.")
+                              mainPanel(
+                                   includeMarkdown("runscoring_references.Rmd")
                             )
                    )
                    
