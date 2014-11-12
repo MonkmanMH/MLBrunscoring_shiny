@@ -20,23 +20,21 @@ data(Teams)
 # ============================
 #
 # select a sub-set of teams from 1901 [the establishment of the American League] forward to most recent year
-Teams_sub <- (filter (Teams, yearID > 1900 & lgID != "FL"))
-firstyear <- Teams_sub$yearID[1]
-mostrecentyear <- tail(Teams_sub$yearID, 1)
 #
-# calculate each team's average runs and runs allowed per game
-Teams_sub$RPG <- Teams_sub$R / Teams_sub$G
-Teams_sub$RAPG <- Teams_sub$RA / Teams_sub$G
+LG_RPG <- Teams %>%
+  filter(yearID > 1900, lgID != "FL") %>%
+  group_by(yearID, lgID) %>%
+  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
+  mutate(RPG=R/G, RAPG=RA/G)
+# and a version with just the MLB totals
+MLB_RPG <- Teams %>%
+  filter(yearID > 1900, lgID != "FL") %>%
+  group_by(yearID) %>%
+  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
+  mutate(RPG=R/G, RAPG=RA/G)
 #
-# create new data frame with season totals for each league
-LG_RPG <- aggregate(cbind(R, RA, G) ~ yearID + lgID, data = Teams_sub, sum)
-# calculate league + season runs and runs allowed per game
-LG_RPG$LG_RPG <- LG_RPG$R / LG_RPG$G
-LG_RPG$LG_RAPG <- LG_RPG$RA / LG_RPG$G
-#
-#
-# Use dplyr (and the inner_join function) to create Teams.merge
-Teams.merge <- inner_join(Teams_sub, LG_RPG, by = c("yearID", "lgID"))
+firstyear <- MLB_RPG$yearID[1]
+mostrecentyear <- tail(MLB_RPG$yearID, 1)
 #
 #
 # ####################################################
@@ -66,7 +64,7 @@ shinyServer(function(input, output) {
 # American League
 output$plot_MLBtrend <- renderPlot({
     # plot the data
-    MLBRPG <- ggplot(LG_RPG, aes(x=yearID, y=LG_RPG)) +
+    MLBRPG <- ggplot(MLB_RPG, aes(x=yearID, y=RPG)) +
              geom_point() +
              xlim(input$lg_yearrange_input[1], input$lg_yearrange_input[2]) +
              ylim(3, 6) +
@@ -75,7 +73,14 @@ output$plot_MLBtrend <- renderPlot({
              xlab("year") + ylab("runs per game")  
     # plot each league separately?
     if (input$leaguesplitselect == TRUE) {
-      MLBRPG <- MLBRPG + facet_grid(lgID ~ .)
+      MLBRPG <- ggplot(LG_RPG, aes(x=yearID, y=RPG)) +
+        geom_point() +
+        xlim(input$lg_yearrange_input[1], input$lg_yearrange_input[2]) +
+        ylim(3, 6) +
+        ggtitle(paste("Major League Baseball: runs per team per game", 
+                      input$lg_yearrange_input[1], "-", input$lg_yearrange_input[2])) +
+        xlab("year") + ylab("runs per game") +
+        facet_grid(lgID ~ .)
     }
     # add trend line to plot?
       if (input$trendlineselect == TRUE) {

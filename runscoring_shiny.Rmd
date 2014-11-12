@@ -47,7 +47,39 @@ LG_RPG <- aggregate(cbind(R, RA, G) ~ yearID + lgID, data = Teams_sub, sum)
 # calculate league + season runs and runs allowed per game
 LG_RPG$LG_RPG <- LG_RPG$R / LG_RPG$G
 LG_RPG$LG_RAPG <- LG_RPG$RA / LG_RPG$G
+ 
+head(LG_RPG)
 #
+```
+ 
+An alternative approach to creating the LG_RPG data frame, using dplyr. The only difference (in this implementation) is that the original is sorted by league, whereas the dplyr is sorted by year.
+ 
+```{r}
+ 
+# dplyr approach to creating LG_RPG
+LG_RPG <- Teams %>%
+  filter(yearID > 1900, lgID != "FL") %>%
+  group_by(yearID, lgID) %>%
+  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
+  mutate(RPG=R/G, RAPG=RA/G)
+ 
+head(LG_RPG)
+
+# and a version with just the MLB totals
+MLB_RPG <- Teams %>%
+  filter(yearID > 1900, lgID != "FL") %>%
+  group_by(yearID) %>%
+  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
+  mutate(RPG=R/G, RAPG=RA/G)
+ 
+head(MLB_RPG)
+
+
+```
+ 
+Filtering the LG_RPG file into the separate league tables.  This is no longer necessary, as dplyr and ggplot can filter on the fly.
+ 
+```{r}#
 # select a sub-set of teams from 1901 [the establishment of the American League] forward to 2012
 # read the data into separate league tables
 ALseason <- (subset (LG_RPG, yearID > 1900 & lgID == "AL"))
