@@ -12,12 +12,11 @@ library(dplyr)
 library(ggplot2)
 library(Lahman)
 #
-# load the Lahman data table "Teams"
-data(Teams)
-#
-#
 # CREATE LEAGUE SUMMARY TABLES
 # ============================
+#
+# load the Lahman data table "Teams"
+data(Teams)
 #
 # select a sub-set of teams from 1901 [the establishment of the American League] forward to most recent year
 #
@@ -61,7 +60,6 @@ shinyServer(function(input, output) {
   #
 # +++++ PLOTS: RUNS SCORED PER GAME BY LEAGUE
 
-# American League
 output$plot_MLBtrend <- renderPlot({
     # plot the data
     MLBRPG <- ggplot(MLB_RPG, aes(x=yearID, y=RPG)) +
@@ -71,6 +69,7 @@ output$plot_MLBtrend <- renderPlot({
              ggtitle(paste("Major League Baseball: runs per team per game", 
                            input$lg_yearrange_input[1], "-", input$lg_yearrange_input[2])) +
              xlab("year") + ylab("runs per game")  
+
     # plot each league separately?
     if (input$leaguesplitselect == TRUE) {
       MLBRPG <- ggplot(LG_RPG, aes(x=yearID, y=RPG)) +
