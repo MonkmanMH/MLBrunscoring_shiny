@@ -9,7 +9,7 @@
 library(shiny)
 
 shinyUI(navbarPage("MLB run scoring trends",
-                   tabPanel("league",
+                   tabPanel("league plot",
                             #
                             titlePanel("Per-game run scoring by league"),
                             #
@@ -23,7 +23,6 @@ shinyUI(navbarPage("MLB run scoring trends",
                                 hr(),
                                 # checkbox for league split into facet
                                 checkboxInput("leaguesplitselect", label = h4("Plot each league separately"), value = FALSE),
-                                hr(),
                                 hr(),
                                 # checkbox for trend line
                                 checkboxInput("trendlineselect", label = h4("Add a trend line"), value = FALSE),
@@ -40,27 +39,97 @@ shinyUI(navbarPage("MLB run scoring trends",
                                                             "0.99" = 0.99, "0.999" = 0.999, 
                                                             "0.9999" = 0.9999), 
                                              selected = 0.95),
-                                hr(),
-                                column(4, verbatimTextOutput("trendline_conf"))
+#                                hr(),
+#                                column(4, verbatimTextOutput("trendline_conf")),
+                                hr()
                               ),
                               # ---- end sidebarPanel
                               # 
                               mainPanel(
-                                plotOutput("plot_MLBtrend")
-                              )
+                                h4("Runs per game: chart"),
+                                plotOutput("plot_MLBtrend"),
+                                br(), 
+                                h4("Runs per game: data table"),
+                                dataTableOutput(outputId="MLBtable")
+                                )
                               # ---- end mainPanel
                             )
                             # ---- end sidebarLayout                              
                    ),
-                   # ---------- end tabPanel "league"
-                   #
-                   tabPanel("reference",
-                              mainPanel(
-                                   includeMarkdown("runscoring_references.Rmd")
-                            )
-                   )
+                   # ---------- end tabPanel "league plot"
                    
-                   # ----- end tabPanel "reference"
+                   tabPanel("team plot",
+                            #
+                            titlePanel("Per-game runs scored & allowed by team"),
+                            #
+                            # Sidebar with a dropdown list of ministry names
+                            sidebarLayout(
+                              
+                              sidebarPanel(
+                                uiOutput("TeamNameListUI"),
+                                hr(),
+#                                uiOutput("team_yearrange"),
+#                                hr(),
+                                # checkbox for trend line
+                                checkboxInput("team_trendlineselect", label = h4("Add a trend line"), value = TRUE),
+                                # slider bar for trend line sensitivity 
+                                sliderInput("team_trendline_sen_sel", 
+                                            label = (h5("Select trend line sensitivity")), 
+                                            min = 0.05, max = 1, value = .25, step = .05),
+                                hr(),
+                                # radio buttons for trend line confidence interval 
+#                                radioButtons("team_trendline_conf_sel", 
+#                                             label = h5("Select trend line confidence level"),
+#                                             choices = list("0.10" = .1, "0.50" = 0.5,
+#                                                            "0.90" = 0.9, "0.95" = 0.95,
+#                                                            "0.99" = 0.99, "0.999" = 0.999, 
+#                                                            "0.9999" = 0.9999), 
+#                                             selected = 0.10),
+#                                hr(),
+#                                column(4, verbatimTextOutput("team_trendline_conf")),
+                                hr()
+                              ),
+                              # ---- end team sidebarPanel
+                              # 
+                              mainPanel(
+                                plotOutput("plot_teamTrend"),
+                                br(),
+                                h4("Runs per game by team: data table"),
+                                dataTableOutput(outputId="Team1_data_table"),
+                                br()
+                                
+                                )
+                              # ---- end team mainPanel
+                            )
+                            # ---- end team sidebarLayout                              
+                   ),
+                   # ---------- end tabPanel "team"
+                   
+                   tabPanel("team data",
+                            br(),
+                              h4("Runs per game by team: data table"),
+                              dataTableOutput(outputId="team_data_table"),
+                              br()
+                            
+                   ),
+                   
+                   # ---------- end tabPanel "league data"
+                   
+                   
+                   #
+                   navbarMenu("More",
+                              tabPanel("reference",
+                                       fluidRow(
+                                         column(12,
+                                         includeMarkdown("runscoring_references.Rmd")
+                                       ))),
+                              tabPanel("documentation",
+                                      fluidRow(
+                                        column(12,
+                                        includeMarkdown("runscoring_documentation.Rmd")
+                                      )))
+                   )
+                   # ----- end navbarMenu "More"
 ))
 # ---------- end navbarPage
 #  
