@@ -11,7 +11,7 @@ output: html_document
 
 This app was written by Martin Monkman using the R package [Shiny](http://shiny.rstudio.com/).
 
-All of the files associated with this app can be found on [github.com](github.com), 
+All of the files associated with this app, including the code, can be found on [github.com](github.com), 
 at [MonkmanMH/MLBrunscoring_shiny](https://github.com/MonkmanMH/MLBrunscoring_shiny).
 
 
@@ -24,6 +24,7 @@ at [MonkmanMH/MLBrunscoring_shiny](https://github.com/MonkmanMH/MLBrunscoring_sh
 + [widget gallery](http://shiny.rstudio.com/gallery/widget-gallery.html) -- with the wide range of UI widgets within Shiny, each with a variety of options, this gallery is an amazing resource.
 + [function reference](http://shiny.rstudio.com/reference/shiny/latest/) -- just like it says. Essential.  
 
+
 **shiny - other sources**
 
 + [shiny tutorial using Gapminder data](https://stat545-ubc.github.io/shiny03_activity.html) -- a tutorial from the UBC course Stat 545 by Julia Gustavsen.
@@ -31,190 +32,11 @@ at [MonkmanMH/MLBrunscoring_shiny](https://github.com/MonkmanMH/MLBrunscoring_sh
 
 **dplyr**
 
++ [Introduction to dplyr](http://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html)
+
++ [Hands-on dplyr tutorial for faster data manipulation in R](http://www.dataschool.io/dplyr-tutorial-for-faster-data-manipulation-in-r/)
+
 + [on joins](http://stackoverflow.com/questions/1299871/how-to-join-data-frames-in-r-inner-outer-left-right)
-
-
-### The Code
-
-#### server.R
-
-The first few lines call the relevant packages required to run the app.  While most are functional, the Lahman package contains the data that will be used, specifically the "Teams" data set.  The Lahman package bundles all of the tables provided in the [Lahman database](http://www.seanlahman.com/baseball-archive/statistics/).
-
-```{r}
-
-# package load 
-library(shiny)
-library(dplyr)
-library(ggplot2)
-library(Lahman)
-#
-# CREATE LEAGUE SUMMARY TABLES
-# ============================
-#
-# load the Lahman data table "Teams"
-data(Teams)
-#
-# select a sub-set of teams from 1901 [the establishment of the American League] forward to most recent year
-#
-LG_RPG <- Teams %>%
-  filter(yearID > 1900, lgID != "FL") %>%
-  group_by(yearID, lgID) %>%
-  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
-  mutate(RPG=R/G, RAPG=RA/G)
-# and a version with just the MLB totals
-MLB_RPG <- Teams %>%
-  filter(yearID > 1900, lgID != "FL") %>%
-  group_by(yearID) %>%
-  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
-  mutate(RPG=R/G, RAPG=RA/G)
-#
-firstyear <- MLB_RPG$yearID[1]
-mostrecentyear <- tail(MLB_RPG$yearID, 1)
-#
-#
-# ####################################################
-# 
-# Define server logic
-shinyServer(function(input, output) {
-  
-  # trendline select (TRUE / FALSE)
-  output$trendlineselectvalue <- renderPrint({ input$trendlineselect })
-  
-  # trendline sensitivity (slider)
-  output$trendline_sen <- renderPrint({ input$trendline_sen_sel })
-  
-  # trendline confidence interval (slider)
-  output$trendline_conf <- renderPrint({ input$trendline_conf_sel })
-  
-# define yearrange for UI 
-  output$lg_yearrange <- renderUI({
-    sliderInput("lg_yearrange_input", label = h4("Select year range to plot"), 
-                min = firstyear, max = mostrecentyear, value = c(firstyear, mostrecentyear), 
-                step = 1, round = TRUE, format = "####",
-                animate = TRUE)
-  })
-  #
-# +++++ PLOTS: RUNS SCORED PER GAME BY LEAGUE
-
-output$plot_MLBtrend <- renderPlot({
-    # plot the data
-    MLBRPG <- ggplot(MLB_RPG, aes(x=yearID, y=RPG)) +
-             geom_point() +
-             xlim(input$lg_yearrange_input[1], input$lg_yearrange_input[2]) +
-             ylim(3, 6) +
-             ggtitle(paste("Major League Baseball: runs per team per game", 
-                           input$lg_yearrange_input[1], "-", input$lg_yearrange_input[2])) +
-             xlab("year") + ylab("runs per game")  
-
-    # plot each league separately?
-    if (input$leaguesplitselect == TRUE) {
-      MLBRPG <- ggplot(LG_RPG, aes(x=yearID, y=RPG)) +
-        geom_point() +
-        xlim(input$lg_yearrange_input[1], input$lg_yearrange_input[2]) +
-        ylim(3, 6) +
-        ggtitle(paste("Major League Baseball: runs per team per game", 
-                      input$lg_yearrange_input[1], "-", input$lg_yearrange_input[2])) +
-        xlab("year") + ylab("runs per game") +
-        facet_grid(lgID ~ .)
-    }
-    # add trend line to plot?
-      if (input$trendlineselect == TRUE) {
-          MLBRPG <- MLBRPG + 
-            stat_smooth(method=loess, 
-                        span=input$trendline_sen_sel,
-                        level=as.numeric(input$trendline_conf_sel))
-         }
-    # final plot
-    MLBRPG
-
-  })
-  # ----------- end MLBtrend plot
-
-#
-})
-# ----------- end shinyServer function 
-
-```
-
-#### ui.R
-
-```{r}
-
-# Run scoring in Shiny -- ui
-#
-# written by Martin Monkman
-# last update: 2014-11-09
-#
-# resources used & plagarized
-#  - RStudio's widget gallery http://shiny.rstudio.com/gallery/widget-gallery.html
-#
-library(shiny)
-
-shinyUI(navbarPage("MLB run scoring trends",
-                   tabPanel("league",
-                            #
-                            titlePanel("Per-game run scoring by league"),
-                            #
-                            # Sidebar with a dropdown list of ministry names
-                            sidebarLayout(
-                              
-                              sidebarPanel(
-
-                                # slider for year range
-                                uiOutput("lg_yearrange"),
-                                hr(),
-                                # checkbox for league split into facet
-                                checkboxInput("leaguesplitselect", label = h4("Plot each league separately"), value = FALSE),
-                                hr(),
-                                hr(),
-                                # checkbox for trend line
-                                checkboxInput("trendlineselect", label = h4("Add a trend line"), value = FALSE),
-                                # slider bar for trend line sensitivity 
-                                sliderInput("trendline_sen_sel", 
-                                            label = (h5("Select trend line sensitivity")), 
-                                            min = 0.05, max = 1, value = .50, step = .05),
-                                hr(),
-                                # radio buttons for trend line confidence interval 
-                                radioButtons("trendline_conf_sel", 
-                                             label = h5("Select trend line confidence level"),
-                                             choices = list("0.10" = .1, "0.50" = 0.5,
-                                                            "0.90" = 0.9, "0.95" = 0.95,
-                                                            "0.99" = 0.99, "0.999" = 0.999, 
-                                                            "0.9999" = 0.9999), 
-                                             selected = 0.95),
-                                hr(),
-                                column(4, verbatimTextOutput("trendline_conf"))
-                              ),
-                              # ---- end sidebarPanel
-                              # 
-                              mainPanel(
-                                plotOutput("plot_MLBtrend")
-                              )
-                              # ---- end mainPanel
-                            )
-                            # ---- end sidebarLayout                              
-                   ),
-                   # ---------- end tabPanel "league"
-                   #
-                   navbarMenu("More",
-                              tabPanel("reference",
-                                       mainPanel(
-                                         includeMarkdown("runscoring_references.Rmd")
-                                       )),
-                              tabPanel("documentation",
-                              mainPanel(
-                                   includeMarkdown("runscoring_documentation.Rmd")
-                            )
-                   ))
-                   
-                   # ----- end tabPanel "reference"
-))
-# ---------- end navbarPage
-#  
-#  
-
-
-```
 
 
 
