@@ -253,7 +253,7 @@ output$Team1_data_table <- renderDataTable({
 })
 
 
-# -- TEAM DATA TABLE
+################ -- TEAM DATA TABLE
 
 output$team_data_table <- renderDataTable({
 #
@@ -264,7 +264,21 @@ output$team_data_table <- renderDataTable({
   team_data_table <- Teams.merge %>%
     select(yearID, lgID, franchID, name, W, L, R.x, RA.x, teamRPG, leagueRPG, R_index, 
            teamRAPG, leagueRAPG, RA_index)
-     })
+     
+  if (input$tableyearselect != "All"){
+    team_data_table <- team_data_table[team_data_table$yearID == input$tableyearselect,]
+  }
+  
+  if (input$tableleagueselect != "All"){
+    team_data_table <- team_data_table[team_data_table$lgID == input$tableleagueselect,]
+  }
+  
+  if (input$tableteamselect != "All"){
+    team_data_table <- team_data_table[team_data_table$franchID == input$tableteamselect,]
+  }
+  
+  team_data_table
+  })
 
 # ----------- end team data table 
 #

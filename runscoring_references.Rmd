@@ -6,16 +6,11 @@ output: html_document
 ---
 
 ### Major League Baseball run scoring trends
-#### Version 2 (2015-01-04)
-
-Future versions will contain:
-
-* A plot with direct comparison of the trends in each league
 
 
 #### bayesball.blogspot.com
 
-Earlier versions of my analysis of run scoring trends in Major League Baseball can be found on my blog bayesball.blogspot.com.  In reverse order of publication, they are:
+Earlier versions of the analysis of run scoring trends in Major League Baseball can be found on my blog bayesball.blogspot.com.  In reverse order of publication, they are:
 
 * ["Major League Baseball run scoring trends with R's Lahman package"](http://bayesball.blogspot.ca/2013/06/major-league-baseball-run-scoring.html), 2014-06-04
 * ["MLB runs allowed by team; Or, How good were the Maddux/Glavine-era Braves?"](http://bayesball.blogspot.ca/2013/02/mlb-runs-allowed-by-team.html), 2014-02-24

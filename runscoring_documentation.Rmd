@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ## Major League Baseball run scoring trends
-### Version 2 (2015-01-04)
+### Version 2.01 (2015-01-11)
 ### Documentation
 
 This app was written by Martin Monkman using the R package [Shiny](http://shiny.rstudio.com/).

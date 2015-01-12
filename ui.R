@@ -92,6 +92,8 @@ shinyUI(navbarPage("MLB run scoring trends",
                               # ---- end team sidebarPanel
                               # 
                               mainPanel(
+
+                                includeMarkdown("runscoring_teamplot.Rmd"),
                                 plotOutput("plot_teamTrend"),
                                 br(),
                                 h4("Runs per game by team: data table"),
@@ -106,11 +108,39 @@ shinyUI(navbarPage("MLB run scoring trends",
                    # ---------- end tabPanel "team"
                    
                    tabPanel("team data",
+                        fluidPage(
+                          fluidRow(
+                            h4("Runs per game by team: data table"),
                             br(),
-                              h4("Runs per game by team: data table"),
+                            h5("Select year, league, and team to display:"),
+                            
+                              column(3,
+                                     selectInput("tableyearselect",
+                                                 "year:",
+                                                 c("All",
+                                                   unique(as.character(Teams.merge$yearID))))),
+                            
+                            column(3,
+                                   selectInput("tableleagueselect",
+                                               "league:",
+                                               c("All",
+                                                 unique(as.character(Teams.merge$lgID))))),
+                            
+                            column(3,
+                                   selectInput("tableteamselect",
+                                               "team:",
+                                               c("All",
+                                                 unique(as.character(Teams.merge$franchID)))))
+                            
+                            ),  
+                          
+                          fluidRow(      
+                            br(),
+                              h4("text here"),
                               dataTableOutput(outputId="team_data_table"),
                               br()
-                            
+                            )
+                        )         
                    ),
                    
                    # ---------- end tabPanel "league data"
