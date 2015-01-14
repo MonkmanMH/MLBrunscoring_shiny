@@ -9,6 +9,9 @@
 library(shiny)
 
 shinyUI(navbarPage("MLB run scoring trends",
+                   
+# -+-+-+-+-+ LEAGUE PLOT
+                   
                    tabPanel("league plot",
                             #
                             titlePanel("Per-game run scoring by league"),
@@ -57,7 +60,11 @@ shinyUI(navbarPage("MLB run scoring trends",
                             # ---- end sidebarLayout                              
                    ),
                    # ---------- end tabPanel "league plot"
-                   
+
+
+# -+-+-+-+-+ TEAM PLOT
+
+
                    tabPanel("team plot",
                             #
                             titlePanel("Per-game runs scored & allowed by team"),
@@ -92,7 +99,6 @@ shinyUI(navbarPage("MLB run scoring trends",
                               # ---- end team sidebarPanel
                               # 
                               mainPanel(
-
                                 includeMarkdown("runscoring_teamplot.Rmd"),
                                 plotOutput("plot_teamTrend"),
                                 br(),
@@ -106,46 +112,58 @@ shinyUI(navbarPage("MLB run scoring trends",
                             # ---- end team sidebarLayout                              
                    ),
                    # ---------- end tabPanel "team"
+
+# -+-+-+-+-+ TEAM DATA
                    
                    tabPanel("team data",
-                        fluidPage(
-                          fluidRow(
-                            h4("Runs per game by team: data table"),
-                            br(),
-                            h5("Select year, league, and team to display:"),
                             
-                              column(3,
-                                     selectInput("tableyearselect",
-                                                 "year:",
-                                                 c("All",
-                                                   unique(as.character(Teams.merge$yearID))))),
-                            
-                            column(3,
-                                   selectInput("tableleagueselect",
-                                               "league:",
-                                               c("All",
-                                                 unique(as.character(Teams.merge$lgID))))),
-                            
-                            column(3,
-                                   selectInput("tableteamselect",
-                                               "team:",
-                                               c("All",
-                                                 unique(as.character(Teams.merge$franchID)))))
-                            
-                            ),  
+                      fluidPage(
+                        titlePanel("Runs per game by team: data table"),
+                        
+                        fluidRow(
                           
-                          fluidRow(      
+                          column(4,
+                                 selectInput("tableyearselect",
+                                             h5("year:"),
+                                             c("All", as.integer(1901:2013)))
+                          ),
+                          
+                          column(4,
+                                 selectInput("tableleagueselect",
+                                             h5("league:"),
+                                             c("All", "AL", "NL"))
+                          ),
+                          
+                          
+                          column(4,
+                                 selectInput("tableteamselect",
+                                             h5("team:"),
+                                             c("All", 
+                                               "ANA", "ARI", "ATL", "BAL", "BOS",
+                                               "CHC", "CHW", "CIN", "CLE", "COL",
+                                               "DET", "FLA", "HOU", "KCR", "LAD",
+                                               "MIL", "MIN", "NYM", "NYY", "OAK",
+                                               "PHI", "PIT", "SDP", "SEA", "SFG",
+                                               "STL", "TBD", "TEX", "TOR", "WSN"                                                                                             
+                                              ))
+                          )
+
+                        ),
+
+                      fluidRow(
                             br(),
-                              h4("text here"),
+                              h4("the data table"),
                               dataTableOutput(outputId="team_data_table"),
                               br()
-                            )
-                        )         
-                   ),
+                            )        
+                   )),
                    
-                   # ---------- end tabPanel "league data"
+                   # ---------- end tabPanel "team data"
                    
-                   
+ 
+
+# -+-+-+-+-+ MORE
+
                    #
                    navbarMenu("More",
                               tabPanel("reference",

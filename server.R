@@ -40,7 +40,7 @@ mostrecentyear <- tail(MLB_RPG$yearID, 1)
 #
 # create data frame Teams.merge with league averages
 Teams.merge <-  Teams %>%
-  mutate(teamRPG=(R/G), teamRAPG=(RA/G)) 
+  mutate(teamRPG=(R/G), teamRAPG=(RA/G), WLpct=(W/G)) 
 Teams.merge <- 
   merge(Teams.merge, LG_RPG, by = c("yearID", "lgID"))
 #
@@ -247,13 +247,13 @@ output$Team1_data_table <- renderDataTable({
   # the data table, with only the interesting fields (columns)
   #
   Team1_data_table <- Team1 %>%
-    select(yearID, lgID, franchID, name, W, L, R.x, RA.x, teamRPG, leagueRPG, R_index, 
+    select(yearID, lgID, franchID, name, W, L, WLpct, R.x, RA.x, teamRPG, leagueRPG, R_index, 
            teamRAPG, leagueRAPG, RA_index)
 
 })
 
 
-################ -- TEAM DATA TABLE
+# -- TEAM DATA TABLE
 
 output$team_data_table <- renderDataTable({
 #
@@ -262,9 +262,10 @@ output$team_data_table <- renderDataTable({
   #
   # the data table, with only the interesting fields (columns)
   team_data_table <- Teams.merge %>%
-    select(yearID, lgID, franchID, name, W, L, R.x, RA.x, teamRPG, leagueRPG, R_index, 
+    select(yearID, lgID, franchID, name, W, L, WLpct, R.x, RA.x, teamRPG, leagueRPG, R_index, 
            teamRAPG, leagueRAPG, RA_index)
-     
+
+  
   if (input$tableyearselect != "All"){
     team_data_table <- team_data_table[team_data_table$yearID == input$tableyearselect,]
   }
@@ -278,6 +279,7 @@ output$team_data_table <- renderDataTable({
   }
   
   team_data_table
+
   })
 
 # ----------- end team data table 
