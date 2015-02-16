@@ -12,57 +12,22 @@ library(dplyr)
 library(reshape)
 library(ggplot2)
 #
-library(Lahman)
 #
+Teams.merge <- read.csv("Teams_merge.csv", header=TRUE)
+MLB_RPG <- read.csv("MLB_RPG.csv", header=TRUE)
+LG_RPG <- read.csv("LG_RPG.csv", header=TRUE)
 
-# CREATE LEAGUE SUMMARY TABLES
-# ============================
-#
-# load the Lahman data table "Teams", filter
-data(Teams)
-
-# select a sub-set of teams from 1901 [the establishment of the American League] forward to most recent year
-LG_RPG <- Teams %>%
-  filter(yearID > 1900, lgID != "FL") %>%
-  group_by(yearID, lgID) %>%
-  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
-  mutate(leagueRPG=R/G, leagueRAPG=RA/G)
-# and a version with just the MLB totals
-MLB_RPG <- Teams %>%
-  filter(yearID > 1900, lgID != "FL") %>%
-  group_by(yearID) %>%
-  summarise(R=sum(R), RA=sum(RA), G=sum(G)) %>%
-  mutate(leagueRPG=R/G, leagueRAPG=RA/G)
-#
-# define the year limits of the data set
-firstyear <- MLB_RPG$yearID[1]
-mostrecentyear <- tail(MLB_RPG$yearID, 1)
-#
-# create data frame Teams.merge with league averages
-Teams.merge <-  Teams %>%
-  mutate(teamRPG=(R/G), teamRAPG=(RA/G), WLpct=(W/G)) 
-Teams.merge <- 
-  merge(Teams.merge, LG_RPG, by = c("yearID", "lgID"))
-#
-# create new values to compare the individual team's runs/game compares to the league average that season
-Teams.merge <- Teams.merge %>%
-  # runs scored index where 100=the league average for that season
-  mutate(R_index = (teamRPG/leagueRPG)*100) %>%
-  mutate(R_index.sd = sd(R_index)) %>%
-  mutate(R_z = (R_index - 100)/R_index.sd) %>%
-  # runs allowed
-  mutate(RA_index = (teamRAPG/leagueRAPG)*100) %>%
-  mutate(RA_index.sd = sd(RA_index)) %>%
-  mutate(RA_z = (RA_index - 100)/RA_index.sd)
-#
-#
 # create a list of the team names
-TeamNames <- Teams %>%
+TeamNames <- Teams.merge %>%
   filter(yearID > 1900, lgID != "FL") %>%
   distinct(franchID) %>%
   select(franchID) %>%
   arrange(franchID) 
 TeamNameList <- TeamNames$franchID
+#
+# define the year limits of the data set
+firstyear <- MLB_RPG$yearID[1]
+mostrecentyear <- tail(MLB_RPG$yearID, 1)
 #
 
 
