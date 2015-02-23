@@ -54,7 +54,7 @@ shinyServer(function(input, output) {
   output$lg_yearrange <- renderUI({
     sliderInput("lg_yearrange_input", label = h4("Select year range to plot"), 
                 min = firstyear, max = mostrecentyear, value = c(firstyear, mostrecentyear), 
-                step = 1, round = TRUE, format = "####",
+                step = 1, round = TRUE, sep = "",
                 animate = TRUE)
   })
   #
