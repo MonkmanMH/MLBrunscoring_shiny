@@ -13,9 +13,9 @@ library(reshape)
 library(ggplot2)
 #
 #
-Teams.merge <- read.csv("Teams_merge.csv", header=TRUE)
-MLB_RPG <- read.csv("MLB_RPG.csv", header=TRUE)
-LG_RPG <- read.csv("LG_RPG.csv", header=TRUE)
+Teams.merge <- read.csv("datafiles\\Teams_merge.csv", header=TRUE)
+MLB_RPG <- read.csv("datafiles\\MLB_RPG.csv", header=TRUE)
+LG_RPG <- read.csv("datafiles\\LG_RPG.csv", header=TRUE)
 
 # create a list of the team names
 TeamNames <- Teams.merge %>%

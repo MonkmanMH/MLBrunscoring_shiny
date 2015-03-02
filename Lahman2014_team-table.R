@@ -1,7 +1,9 @@
 ######################################################
 # 
 # A short set of instructions that starts with the "Teams" table in the Lahman database
-# and summarizes it for the Shiny app
+# and summarizes it for the Shiny app 
+#
+# 
 #
 # Thus rather than having the app 
 # 1. remove unnecessary records (rows) and fields (columns) and

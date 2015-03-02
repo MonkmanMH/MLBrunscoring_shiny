@@ -99,7 +99,7 @@ shinyUI(navbarPage("MLB run scoring trends",
                               # ---- end team sidebarPanel
                               # 
                               mainPanel(
-                                includeMarkdown("runscoring_teamplot.Rmd"),
+                                includeMarkdown("docs/runscoring_teamplot.Rmd"),
                                 plotOutput("plot_teamTrend"),
                                 br(),
                                 h4("Runs per game by team: data table"),
@@ -169,12 +169,12 @@ shinyUI(navbarPage("MLB run scoring trends",
                               tabPanel("reference",
                                        fluidRow(
                                          column(12,
-                                         includeMarkdown("runscoring_references.Rmd")
+                                         includeMarkdown("docs/runscoring_references.Rmd")
                                        ))),
                               tabPanel("documentation",
                                       fluidRow(
                                         column(12,
-                                        includeMarkdown("runscoring_documentation.Rmd")
+                                        includeMarkdown("docs/runscoring_documentation.Rmd")
                                       )))
                    )
                    # ----- end navbarMenu "More"
