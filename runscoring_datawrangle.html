@@ -1,0 +1,543 @@
+﻿<body>
+
+<style type="text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">MLB run scoring trends: data wrangle</h1>
+<h4 class="author"><em>Martin Monkman</em></h4>
+<h4 class="date"><em>February 24, 2019</em></h4>
+
+</div>
+
+
+<p>The new Major League Baseball season will soon begin, which means it’s time to look back and update my run scoring trends data visualization application, built using RStudio’s shiny package.</p>
+<p>You can find the app here: <a href="https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/" class="uri">https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/</a></p>
+<p>The github repo for this app is <a href="https://github.com/MonkmanMH/Bayesball/tree/master/MLBrunscoring_shiny" class="uri">https://github.com/MonkmanMH/Bayesball/tree/master/MLBrunscoring_shiny</a></p>
+<p>This update gave me the opportunity to make some cosmetic tweaks to the front end, and more consequential changes to the code under the hood.</p>
+<div id="retired-reshape-using-tidyr" class="section level2">
+<h2>1. retired <code>reshape</code>, using <code>tidyr</code></h2>
+<p>At one point in the app’s code, I had used the now-retired <a href="https://cran.r-project.org/web/packages/reshape/index.html"><code>reshape</code></a> package to melt a data table. Although this still works, I opted to update the code to use the <code>gather()</code> function in the package <code>tidyr</code>, part of <a href="https://www.tidyverse.org/">the tidyverse</a>.</p>
+</div>
+<div id="feather-instead-of-csv" class="section level2">
+<h2>2. <code>feather</code> instead of csv</h2>
+<p>The app relied on some pre-wrangled csv files; these have been replaced by files stored using the <a href="https://blog.rstudio.com/2016/03/29/feather/">.feather format</a>, which makes for a signficant performance improvement.</p>
+</div>
+<div id="wrangling-the-calculation-of-team-and-league-run-scoring-averages" class="section level2">
+<h2>3. wrangling: the calculation of team and league run scoring averages</h2>
+<p>The goal is to create data tables that minimize the amount of processing the app has to do.</p>
+<p>In previous versions of the app, the filtering of rows (records or observations) and selecting of columns (variables), the calculation of each team’s average runs scored and runs allowed per game, the league average runs per game, and the comparison of the team to the league, was done first using base R’s <code>apply</code> family of functions.</p>
+<p>Then I switched to using <code>dplyr</code>, and although the steps were now in a pipe, this approach still required creating a separate data table with the league average, and then joining that table back into the main team table so that the team result could be compared to the league average.</p>
+<p>For this iteration, preparing the data for the app is now done using <code>tidyr::nest()</code> and <code>purrr::map()</code>. What follows is a detailed explanation of how I approached this.</p>
+<p>It’s always valuable to have your end-state in mind when working through a multi-step data wrangle like this. My goal as the values shown on the “team plot” tab of the app – an index value (i.e. a percentage) of a team’s average runs scored (and runs allowed) compared to the league run scoring rate, for a single season.</p>
+<div id="a.-load-packages-and-read-the-data" class="section level3">
+<h3>a. Load packages and read the data</h3>
+<p>First, load the necessary packages, the first four of which are part of the tidyverse.</p>
+<pre class="r"><code># tidyverse packages
+library(dplyr)
+library(purrr)
+library(readr)
+library(tidyr)
+
+library(feather)</code></pre>
+<p>Then, read in the data.</p>
+<ul>
+<li><p>It comes from the “Lahman” baseball database, so-named after the originator and hoster, Sean Lahman. <a href="http://www.seanlahman.com/baseball-archive/statistics/">His website</a> has the current version of the database, as well as an archive of previous versions.</p></li>
+<li><p>The data table “Teams” is sourced from the <em>baseballdatabank</em> on github <a href="https://github.com/chadwickbureau/baseballdatabank" class="uri">https://github.com/chadwickbureau/baseballdatabank</a>)); I’ve also saved in the github repo for this app.</p></li>
+<li><p>There is an <a href="https://github.com/cdalzell/Lahman">R package with the Lahman database</a>, but it’s currently two seasons behind the source files.</p></li>
+</ul>
+<pre class="r"><code>Teams &lt;- read_csv(&quot;Teams.csv&quot;,
+                  col_types = cols(
+                    divID = col_character(),
+                    DivWin = col_character(),
+                    SF = col_character(),
+                    WCWin = col_character()
+                  ))
+
+head(Teams)</code></pre>
+<pre><code>## # A tibble: 6 x 48
+##   yearID lgID  teamID franchID divID  Rank     G Ghome     W     L DivWin
+##    &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;    &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; 
+## 1   1871 &lt;NA&gt;  BS1    BNA      &lt;NA&gt;      3    31    NA    20    10 &lt;NA&gt;  
+## 2   1871 &lt;NA&gt;  CH1    CNA      &lt;NA&gt;      2    28    NA    19     9 &lt;NA&gt;  
+## 3   1871 &lt;NA&gt;  CL1    CFC      &lt;NA&gt;      8    29    NA    10    19 &lt;NA&gt;  
+## 4   1871 &lt;NA&gt;  FW1    KEK      &lt;NA&gt;      7    19    NA     7    12 &lt;NA&gt;  
+## 5   1871 &lt;NA&gt;  NY2    NNA      &lt;NA&gt;      5    33    NA    16    17 &lt;NA&gt;  
+## 6   1871 &lt;NA&gt;  PH1    PNA      &lt;NA&gt;      1    28    NA    21     7 &lt;NA&gt;  
+## # ... with 37 more variables: WCWin &lt;chr&gt;, LgWin &lt;chr&gt;, WSWin &lt;chr&gt;,
+## #   R &lt;dbl&gt;, AB &lt;dbl&gt;, H &lt;dbl&gt;, `2B` &lt;dbl&gt;, `3B` &lt;dbl&gt;, HR &lt;dbl&gt;,
+## #   BB &lt;dbl&gt;, SO &lt;dbl&gt;, SB &lt;dbl&gt;, CS &lt;dbl&gt;, HBP &lt;dbl&gt;, SF &lt;chr&gt;, RA &lt;dbl&gt;,
+## #   ER &lt;dbl&gt;, ERA &lt;dbl&gt;, CG &lt;dbl&gt;, SHO &lt;dbl&gt;, SV &lt;dbl&gt;, IPouts &lt;dbl&gt;,
+## #   HA &lt;dbl&gt;, HRA &lt;dbl&gt;, BBA &lt;dbl&gt;, SOA &lt;dbl&gt;, E &lt;dbl&gt;, DP &lt;dbl&gt;,
+## #   FP &lt;dbl&gt;, name &lt;chr&gt;, park &lt;chr&gt;, attendance &lt;dbl&gt;, BPF &lt;dbl&gt;,
+## #   PPF &lt;dbl&gt;, teamIDBR &lt;chr&gt;, teamIDlahman45 &lt;chr&gt;, teamIDretro &lt;chr&gt;</code></pre>
+<p>The table above has far more variables than what we need, and some that we’ll have to calculate.</p>
+</div>
+<div id="b.-create-league-summary-tables" class="section level3">
+<h3>b. Create league summary tables</h3>
+<p>A short set of instructions that starts with the “Teams” table in the Lahman database and summarizes it for <a href="https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/">MLB run scoring trends</a> Shiny app</p>
+<p>Thus rather than having the app do the work of</p>
+<ol style="list-style-type: decimal">
+<li><p>remove unnecessary records (rows) and fields (columns) and</p></li>
+<li><p>run the calculations for the runs-per-game, runs-allowed-per-game, and indexed versions of those,</p></li>
+</ol>
+<p>the calculations are conducted here. This will vastly improve the performance of the app.</p>
+<div id="i.-create-nested-table" class="section level4">
+<h4>i. create nested table</h4>
+<p>I started with the “Many Models”&quot; chapter of Wickham and Grolemund, <a href="https://r4ds.had.co.nz/many-models.html">R for Data Science</a>. (And thanks to Dr. Charlotte Wickham, whose training course was invaliable in helping me wrap my head around this.)</p>
+<p>At this point, the code</p>
+<ul>
+<li><p>filters out the years prior to 1901 and <a href="https://en.wikipedia.org/wiki/Federal_League">the misbegotten Federal League</a>.</p></li>
+<li><p>and then creates a nested data table, starting with the <code>group_by()</code> year and league (<code>lgID</code>)</p></li>
+</ul>
+<pre class="r"><code># select a sub-set of teams from 1901 [the establishment of the American League] forward to most recent year
+Teams_lgyr &lt;- Teams %&gt;%
+  filter(yearID &gt; 1900, lgID != &quot;FL&quot;) %&gt;%
+  group_by(yearID, lgID) %&gt;%
+  nest()
+
+Teams_lgyr</code></pre>
+<pre><code>## # A tibble: 236 x 3
+##    yearID lgID  data             
+##     &lt;dbl&gt; &lt;chr&gt; &lt;list&gt;           
+##  1   1901 AL    &lt;tibble [8 x 46]&gt;
+##  2   1901 NL    &lt;tibble [8 x 46]&gt;
+##  3   1902 AL    &lt;tibble [8 x 46]&gt;
+##  4   1902 NL    &lt;tibble [8 x 46]&gt;
+##  5   1903 AL    &lt;tibble [8 x 46]&gt;
+##  6   1903 NL    &lt;tibble [8 x 46]&gt;
+##  7   1904 AL    &lt;tibble [8 x 46]&gt;
+##  8   1904 NL    &lt;tibble [8 x 46]&gt;
+##  9   1905 AL    &lt;tibble [8 x 46]&gt;
+## 10   1905 NL    &lt;tibble [8 x 46]&gt;
+## # ... with 226 more rows</code></pre>
+<p>Here’s a quick peek inside the first entry of the “data” column…the American League, 1901.</p>
+<pre class="r"><code>Teams_lgyr$data[[1]]</code></pre>
+<pre><code>## # A tibble: 8 x 46
+##   teamID franchID divID  Rank     G Ghome     W     L DivWin WCWin LgWin
+##   &lt;chr&gt;  &lt;chr&gt;    &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;
+## 1 BLA    NYY      &lt;NA&gt;      5   134    66    68    65 &lt;NA&gt;   &lt;NA&gt;  N    
+## 2 BOS    BOS      &lt;NA&gt;      2   138    69    79    57 &lt;NA&gt;   &lt;NA&gt;  N    
+## 3 CHA    CHW      &lt;NA&gt;      1   137    71    83    53 &lt;NA&gt;   &lt;NA&gt;  Y    
+## 4 CLE    CLE      &lt;NA&gt;      7   138    69    54    82 &lt;NA&gt;   &lt;NA&gt;  N    
+## 5 DET    DET      &lt;NA&gt;      3   135    70    74    61 &lt;NA&gt;   &lt;NA&gt;  N    
+## 6 MLA    BAL      &lt;NA&gt;      8   139    70    48    89 &lt;NA&gt;   &lt;NA&gt;  N    
+## 7 PHA    OAK      &lt;NA&gt;      4   137    66    74    62 &lt;NA&gt;   &lt;NA&gt;  N    
+## 8 WS1    MIN      &lt;NA&gt;      6   138    68    61    72 &lt;NA&gt;   &lt;NA&gt;  N    
+## # ... with 35 more variables: WSWin &lt;chr&gt;, R &lt;dbl&gt;, AB &lt;dbl&gt;, H &lt;dbl&gt;,
+## #   `2B` &lt;dbl&gt;, `3B` &lt;dbl&gt;, HR &lt;dbl&gt;, BB &lt;dbl&gt;, SO &lt;dbl&gt;, SB &lt;dbl&gt;,
+## #   CS &lt;dbl&gt;, HBP &lt;dbl&gt;, SF &lt;chr&gt;, RA &lt;dbl&gt;, ER &lt;dbl&gt;, ERA &lt;dbl&gt;,
+## #   CG &lt;dbl&gt;, SHO &lt;dbl&gt;, SV &lt;dbl&gt;, IPouts &lt;dbl&gt;, HA &lt;dbl&gt;, HRA &lt;dbl&gt;,
+## #   BBA &lt;dbl&gt;, SOA &lt;dbl&gt;, E &lt;dbl&gt;, DP &lt;dbl&gt;, FP &lt;dbl&gt;, name &lt;chr&gt;,
+## #   park &lt;chr&gt;, attendance &lt;dbl&gt;, BPF &lt;dbl&gt;, PPF &lt;dbl&gt;, teamIDBR &lt;chr&gt;,
+## #   teamIDlahman45 &lt;chr&gt;, teamIDretro &lt;chr&gt;</code></pre>
+</div>
+<div id="ii---functional-programming" class="section level4">
+<h4>ii - functional programming</h4>
+<p>This step creates a league run scoring function, and then applies that using the <code>purrr::map()</code> function.</p>
+<p><strong>Note:</strong></p>
+<ul>
+<li>In the gapminder example in <em>R for Data Science</em>, the variables were called using their names. In this case, for a reason I have not yet determined, we have to specify the data object they are coming from; e.g. for the runs variable <code>R</code>, we have to use <code>df$R</code> (not just <code>R</code>).</li>
+</ul>
+<p>First, a simple test, calculating runs scored, and checking to see if we got the right answer, b comparing that to the value calculated using <code>dplyr</code>:</p>
+<pre class="r"><code># base R format
+leagueRuns_fun &lt;- function(df) {
+  sum(data = df$R)
+}
+
+league_year_runs &lt;- map(Teams_lgyr$data, leagueRuns_fun)
+
+league_year_runs[[1]]</code></pre>
+<pre><code>## [1] 5873</code></pre>
+<pre class="r"><code>#check the answer by old school `dplyr` method
+Teams %&gt;%
+  filter(yearID == 1901,
+         lgID == &quot;AL&quot;) %&gt;%
+  summarise(leagueruns = sum(R))</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   leagueruns
+##        &lt;dbl&gt;
+## 1       5873</code></pre>
+<p>Now we move on to the calculation of league averages.</p>
+<p>For the first approach, the sum calculation is part of the function.</p>
+<ul>
+<li><p>There are two functions, one for Runs and the other for Runs Allowed. This is because I have not yet figured out how to specify two different variables (i.e. the name of the data object and the variable to be used in the function) in the map_() function and successfully have them carried into my calculation functions</p></li>
+<li><p>Also note that in order to be consistent with other sources, the number of games played is calculated using the sum of wins (<code>W</code>) and losses (<code>L</code>), rather than the number of games reported in the <code>G</code> variable.</p></li>
+</ul>
+<pre class="r"><code># functions
+leagueRPG_fun &lt;- function(df) {
+  sum(data = df$R) / (sum(data = df$W) + sum(data = df$L))
+  }
+
+leagueRAPG_fun &lt;- function(df) {
+  sum(data = df$RA) / (sum(data = df$W) + sum(data = df$L))
+  }
+
+
+# simple `map` version
+league_year_RPG &lt;- map(Teams_lgyr$data, leagueRPG_fun)
+
+# embed as new columns in nested data object
+Teams_lgyr &lt;- Teams_lgyr %&gt;%
+  mutate(lgRPG = map_dbl(Teams_lgyr$data, leagueRPG_fun),
+         lgRAPG = map_dbl(Teams_lgyr$data, leagueRAPG_fun))
+
+Teams_lgyr</code></pre>
+<pre><code>## # A tibble: 236 x 5
+##    yearID lgID  data              lgRPG lgRAPG
+##     &lt;dbl&gt; &lt;chr&gt; &lt;list&gt;            &lt;dbl&gt;  &lt;dbl&gt;
+##  1   1901 AL    &lt;tibble [8 x 46]&gt;  5.43   5.43
+##  2   1901 NL    &lt;tibble [8 x 46]&gt;  4.69   4.69
+##  3   1902 AL    &lt;tibble [8 x 46]&gt;  4.97   4.97
+##  4   1902 NL    &lt;tibble [8 x 46]&gt;  4.09   4.09
+##  5   1903 AL    &lt;tibble [8 x 46]&gt;  4.15   4.15
+##  6   1903 NL    &lt;tibble [8 x 46]&gt;  4.85   4.85
+##  7   1904 AL    &lt;tibble [8 x 46]&gt;  3.65   3.65
+##  8   1904 NL    &lt;tibble [8 x 46]&gt;  3.98   3.98
+##  9   1905 AL    &lt;tibble [8 x 46]&gt;  3.75   3.75
+## 10   1905 NL    &lt;tibble [8 x 46]&gt;  4.16   4.16
+## # ... with 226 more rows</code></pre>
+<p>In the second approach:</p>
+<ul>
+<li><p>the league and year total runs, runs allowed, and games are first calculated using separate functions</p></li>
+<li><p>RPG and RAPG for each league and year combination are then calculated outside the nested tibbles</p></li>
+</ul>
+<pre class="r"><code># more functions - individual league by year totals
+leagueR_fun &lt;- function(df) {
+  sum(data = df$R)
+}
+
+leagueRA_fun &lt;- function(df) {
+  sum(data = df$RA)
+}
+
+leagueG_fun &lt;- function(df) {
+  (sum(data = df$W) + sum(data = df$L))
+}
+
+
+Teams_lgyr &lt;- Teams_lgyr %&gt;%
+  mutate(lgR = map_dbl(Teams_lgyr$data, leagueR_fun),
+         lgRA = map_dbl(Teams_lgyr$data, leagueRA_fun),
+         lgG = map_dbl(Teams_lgyr$data, leagueG_fun))
+
+
+Teams_lgyr &lt;- Teams_lgyr %&gt;%
+  mutate(lgRPG = (lgR / lgG),
+         lgRAPG = (lgRA / lgG))
+
+Teams_lgyr</code></pre>
+<pre><code>## # A tibble: 236 x 8
+##    yearID lgID  data              lgRPG lgRAPG   lgR  lgRA   lgG
+##     &lt;dbl&gt; &lt;chr&gt; &lt;list&gt;            &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1   1901 AL    &lt;tibble [8 x 46]&gt;  5.43   5.43  5873  5873  1082
+##  2   1901 NL    &lt;tibble [8 x 46]&gt;  4.69   4.69  5194  5194  1108
+##  3   1902 AL    &lt;tibble [8 x 46]&gt;  4.97   4.97  5407  5407  1088
+##  4   1902 NL    &lt;tibble [8 x 46]&gt;  4.09   4.09  4494  4494  1098
+##  5   1903 AL    &lt;tibble [8 x 46]&gt;  4.15   4.15  4543  4543  1096
+##  6   1903 NL    &lt;tibble [8 x 46]&gt;  4.85   4.85  5349  5349  1102
+##  7   1904 AL    &lt;tibble [8 x 46]&gt;  3.65   3.65  4433  4433  1216
+##  8   1904 NL    &lt;tibble [8 x 46]&gt;  3.98   3.98  4872  4872  1224
+##  9   1905 AL    &lt;tibble [8 x 46]&gt;  3.75   3.75  4547  4547  1212
+## 10   1905 NL    &lt;tibble [8 x 46]&gt;  4.16   4.16  5092  5092  1224
+## # ... with 226 more rows</code></pre>
+</div>
+<div id="iii.-save-lg_rpg-files" class="section level4">
+<h4>iii. save LG_RPG files</h4>
+<p>And then write csv and feather versions. As noted above, the shiny app now uses the <code>feather</code> format.</p>
+<ul>
+<li>note the renaming of variables to correspond with shiny app names.</li>
+</ul>
+<pre class="r"><code>LG_RPG &lt;- Teams_lgyr %&gt;%
+  select(yearID, lgID, R = lgR, RA = lgRA, G = lgG, 
+         leagueRPG = lgRPG, leagueRAPG = lgRAPG)
+
+LG_RPG</code></pre>
+<pre><code>## # A tibble: 236 x 7
+##    yearID lgID      R    RA     G leagueRPG leagueRAPG
+##     &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;
+##  1   1901 AL     5873  5873  1082      5.43       5.43
+##  2   1901 NL     5194  5194  1108      4.69       4.69
+##  3   1902 AL     5407  5407  1088      4.97       4.97
+##  4   1902 NL     4494  4494  1098      4.09       4.09
+##  5   1903 AL     4543  4543  1096      4.15       4.15
+##  6   1903 NL     5349  5349  1102      4.85       4.85
+##  7   1904 AL     4433  4433  1216      3.65       3.65
+##  8   1904 NL     4872  4872  1224      3.98       3.98
+##  9   1905 AL     4547  4547  1212      3.75       3.75
+## 10   1905 NL     5092  5092  1224      4.16       4.16
+## # ... with 226 more rows</code></pre>
+<pre class="r"><code>write_csv(LG_RPG, &quot;LG_RPG.csv&quot;)
+write_feather(LG_RPG, &quot;LG_RPG.feather&quot;)</code></pre>
+</div>
+</div>
+<div id="c.-repeat-for-mlb-total" class="section level3">
+<h3>c. Repeat for MLB total</h3>
+<p>This only differs from the league summaries in the level of nesting; instead of grouping by year and league, it’s only year (<code>yearID</code>).</p>
+<pre class="r"><code>Teams_lgyr &lt;- Teams_lgyr %&gt;%
+  unnest() %&gt;%
+  group_by(yearID) %&gt;%
+  nest()
+
+Teams_lgyr</code></pre>
+<pre><code>## # A tibble: 118 x 2
+##    yearID data              
+##     &lt;dbl&gt; &lt;list&gt;            
+##  1   1901 &lt;tibble [16 x 52]&gt;
+##  2   1902 &lt;tibble [16 x 52]&gt;
+##  3   1903 &lt;tibble [16 x 52]&gt;
+##  4   1904 &lt;tibble [16 x 52]&gt;
+##  5   1905 &lt;tibble [16 x 52]&gt;
+##  6   1906 &lt;tibble [16 x 52]&gt;
+##  7   1907 &lt;tibble [16 x 52]&gt;
+##  8   1908 &lt;tibble [16 x 52]&gt;
+##  9   1909 &lt;tibble [16 x 52]&gt;
+## 10   1910 &lt;tibble [16 x 52]&gt;
+## # ... with 108 more rows</code></pre>
+<pre class="r"><code>Teams_lgyr &lt;- Teams_lgyr %&gt;%
+  mutate(mlbR = map_dbl(Teams_lgyr$data, leagueR_fun),
+         mlbRA = map_dbl(Teams_lgyr$data, leagueRA_fun),
+         mlbG = map_dbl(Teams_lgyr$data, leagueG_fun),
+         mlbRPG = (mlbR / mlbG),
+         mlbRAPG = (mlbRA / mlbG))
+
+Teams_lgyr</code></pre>
+<pre><code>## # A tibble: 118 x 7
+##    yearID data                mlbR mlbRA  mlbG mlbRPG mlbRAPG
+##     &lt;dbl&gt; &lt;list&gt;             &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+##  1   1901 &lt;tibble [16 x 52]&gt; 11067 11067  2190   5.05    5.05
+##  2   1902 &lt;tibble [16 x 52]&gt;  9901  9901  2186   4.53    4.53
+##  3   1903 &lt;tibble [16 x 52]&gt;  9892  9892  2198   4.50    4.50
+##  4   1904 &lt;tibble [16 x 52]&gt;  9305  9305  2440   3.81    3.81
+##  5   1905 &lt;tibble [16 x 52]&gt;  9639  9639  2436   3.96    3.96
+##  6   1906 &lt;tibble [16 x 52]&gt;  8881  8878  2416   3.68    3.67
+##  7   1907 &lt;tibble [16 x 52]&gt;  8703  8703  2406   3.62    3.62
+##  8   1908 &lt;tibble [16 x 52]&gt;  8422  8422  2456   3.43    3.43
+##  9   1909 &lt;tibble [16 x 52]&gt;  8810  8810  2436   3.62    3.62
+## 10   1910 &lt;tibble [16 x 52]&gt;  9584  9584  2446   3.92    3.92
+## # ... with 108 more rows</code></pre>
+<p>And again, we save the files for use in the shiny app.</p>
+<pre class="r"><code>MLB_RPG &lt;- Teams_lgyr %&gt;%
+  select(yearID, R = mlbR, RA = mlbRA, G = mlbG, 
+         leagueRPG = mlbRPG, leagueRAPG = mlbRAPG)
+
+write_csv(MLB_RPG, &quot;MLB_RPG.csv&quot;)
+write_feather(MLB_RPG, &quot;MLB_RPG.feather&quot;)</code></pre>
+</div>
+<div id="d.-individual-team-values" class="section level3">
+<h3>d. Individual team values</h3>
+<p>Calculate index of team run scoring against league average</p>
+<p>Note that we start with <code>unnest()</code> and create a new object, <code>Teams_append</code> … a tibble with all of the variables exposed.</p>
+<pre class="r"><code>Teams_append &lt;- Teams_lgyr %&gt;%
+  unnest() %&gt;%
+  mutate(teamRPG=(R / (W + L)), 
+         teamRAPG=(RA / (W + L)), 
+         WLpct=(W / (W + L))) %&gt;%
+  # runs scored index where 100=the league average for that season
+  mutate(R_index = (teamRPG / lgRPG) * 100) %&gt;%
+  mutate(R_index.sd = sd(R_index)) %&gt;%
+  mutate(R_z = (R_index - 100) / R_index.sd) %&gt;%
+  # runs allowed
+  mutate(RA_index = (teamRAPG / lgRAPG) * 100) %&gt;%
+  mutate(RA_index.sd = sd(RA_index)) %&gt;%
+  mutate(RA_z = (RA_index - 100) / RA_index.sd) 
+
+
+Teams_append</code></pre>
+<pre><code>## # A tibble: 2,496 x 67
+##    yearID  mlbR mlbRA  mlbG mlbRPG mlbRAPG lgID  lgRPG lgRAPG   lgR  lgRA
+##     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  2   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  3   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  4   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  5   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  6   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  7   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  8   1901 11067 11067  2190   5.05    5.05 AL     5.43   5.43  5873  5873
+##  9   1901 11067 11067  2190   5.05    5.05 NL     4.69   4.69  5194  5194
+## 10   1901 11067 11067  2190   5.05    5.05 NL     4.69   4.69  5194  5194
+## # ... with 2,486 more rows, and 56 more variables: lgG &lt;dbl&gt;,
+## #   teamID &lt;chr&gt;, franchID &lt;chr&gt;, divID &lt;chr&gt;, Rank &lt;dbl&gt;, G &lt;dbl&gt;,
+## #   Ghome &lt;dbl&gt;, W &lt;dbl&gt;, L &lt;dbl&gt;, DivWin &lt;chr&gt;, WCWin &lt;chr&gt;, LgWin &lt;chr&gt;,
+## #   WSWin &lt;chr&gt;, R &lt;dbl&gt;, AB &lt;dbl&gt;, H &lt;dbl&gt;, `2B` &lt;dbl&gt;, `3B` &lt;dbl&gt;,
+## #   HR &lt;dbl&gt;, BB &lt;dbl&gt;, SO &lt;dbl&gt;, SB &lt;dbl&gt;, CS &lt;dbl&gt;, HBP &lt;dbl&gt;, SF &lt;chr&gt;,
+## #   RA &lt;dbl&gt;, ER &lt;dbl&gt;, ERA &lt;dbl&gt;, CG &lt;dbl&gt;, SHO &lt;dbl&gt;, SV &lt;dbl&gt;,
+## #   IPouts &lt;dbl&gt;, HA &lt;dbl&gt;, HRA &lt;dbl&gt;, BBA &lt;dbl&gt;, SOA &lt;dbl&gt;, E &lt;dbl&gt;,
+## #   DP &lt;dbl&gt;, FP &lt;dbl&gt;, name &lt;chr&gt;, park &lt;chr&gt;, attendance &lt;dbl&gt;,
+## #   BPF &lt;dbl&gt;, PPF &lt;dbl&gt;, teamIDBR &lt;chr&gt;, teamIDlahman45 &lt;chr&gt;,
+## #   teamIDretro &lt;chr&gt;, teamRPG &lt;dbl&gt;, teamRAPG &lt;dbl&gt;, WLpct &lt;dbl&gt;,
+## #   R_index &lt;dbl&gt;, R_index.sd &lt;dbl&gt;, R_z &lt;dbl&gt;, RA_index &lt;dbl&gt;,
+## #   RA_index.sd &lt;dbl&gt;, RA_z &lt;dbl&gt;</code></pre>
+<div id="i.-save-file-for-shiny-app" class="section level4">
+<p>
+<p>In this the final step, we first create a new data object <code>Teams_merge</code></p>
+<ul>
+<li><p>note selection and renaming of variables to correspond with shiny app names</p></li>
+<li><p>then write csv and feather versions.</p></li>
+</ul>
+<pre class="r"><code>Teams_merge &lt;- Teams_append %&gt;%
+  select(yearID, lgID, franchID, teamID, name,
+         W, L, WLpct, R.x = R, RA.x = RA, 
+         teamRPG, leagueRPG = lgRPG, R_index,
+         teamRAPG, leagueRAPG = lgRAPG, RA_index)
+
+Teams_merge</code></pre>
+<pre><code>## # A tibble: 2,496 x 16
+##    yearID lgID  franchID teamID name      W     L WLpct   R.x  RA.x teamRPG
+##     &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;  &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
+##  1   1901 AL    NYY      BLA    Balt~    68    65 0.511   760   750    5.71
+##  2   1901 AL    BOS      BOS    Bost~    79    57 0.581   759   608    5.58
+##  3   1901 AL    CHW      CHA    Chic~    83    53 0.610   819   631    6.02
+##  4   1901 AL    CLE      CLE    Clev~    54    82 0.397   666   831    4.90
+##  5   1901 AL    DET      DET    Detr~    74    61 0.548   741   694    5.49
+##  6   1901 AL    BAL      MLA    Milw~    48    89 0.350   641   828    4.68
+##  7   1901 AL    OAK      PHA    Phil~    74    62 0.544   805   760    5.92
+##  8   1901 AL    MIN      WS1    Wash~    61    72 0.459   682   771    5.13
+##  9   1901 NL    LAD      BRO    Broo~    79    57 0.581   744   600    5.47
+## 10   1901 NL    ATL      BSN    Bost~    69    69 0.5     531   556    3.85
+## # ... with 2,486 more rows, and 5 more variables: leagueRPG &lt;dbl&gt;,
+## #   R_index &lt;dbl&gt;, teamRAPG &lt;dbl&gt;, leagueRAPG &lt;dbl&gt;, RA_index &lt;dbl&gt;</code></pre>
+<pre class="r"><code>write_csv(Teams_merge, &quot;Teams_merge.csv&quot;)
+write_feather(Teams_merge, &quot;Teams_merge.feather&quot;)</code></pre>
+<p>And the feather files can now be incorproated into the shiny app.</p>
+<p>-30-</p>
+</div>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
