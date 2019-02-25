@@ -135,7 +135,7 @@ shinyUI(navbarPage("MLB run scoring trends",
                           column(4,
                                  selectInput("tableyearselect",
                                              h5("year:"),
-                                             c("All", as.integer(1901:2016)))
+                                             c("All", as.integer(1901:2018)))
                           ),
                           
                           column(4,

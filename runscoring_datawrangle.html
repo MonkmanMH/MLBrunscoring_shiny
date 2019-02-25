@@ -1,4 +1,4 @@
-﻿<body>
+<body>
 
 <style type="text/css">
 .main-container {
@@ -119,14 +119,15 @@ $(document).ready(function () {
 
 <p>The new Major League Baseball season will soon begin, which means it’s time to look back and update my run scoring trends data visualization application, built using RStudio’s shiny package.</p>
 <p>You can find the app here: <a href="https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/" class="uri">https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/</a></p>
-<p>The github repo for this app is <a href="https://github.com/MonkmanMH/Bayesball/tree/master/MLBrunscoring_shiny" class="uri">https://github.com/MonkmanMH/Bayesball/tree/master/MLBrunscoring_shiny</a></p>
+<p>The github repo for this app is <a href="https://github.com/MonkmanMH/MLBrunscoring_shiny" class="uri">https://github.com/MonkmanMH/MLBrunscoring_shiny</a></p>
+
 <p>This update gave me the opportunity to make some cosmetic tweaks to the front end, and more consequential changes to the code under the hood.</p>
 <div id="retired-reshape-using-tidyr" class="section level2">
 <h2>1. retired <code>reshape</code>, using <code>tidyr</code></h2>
 <p>At one point in the app’s code, I had used the now-retired <a href="https://cran.r-project.org/web/packages/reshape/index.html"><code>reshape</code></a> package to melt a data table. Although this still works, I opted to update the code to use the <code>gather()</code> function in the package <code>tidyr</code>, part of <a href="https://www.tidyverse.org/">the tidyverse</a>.</p>
 </div>
 <div id="feather-instead-of-csv" class="section level2">
-<h2>2. <code>feather</code> instead of csv</h2>
+<h2>2. feather instead of csv</h2>
 <p>The app relied on some pre-wrangled csv files; these have been replaced by files stored using the <a href="https://blog.rstudio.com/2016/03/29/feather/">.feather format</a>, which makes for a signficant performance improvement.</p>
 </div>
 <div id="wrangling-the-calculation-of-team-and-league-run-scoring-averages" class="section level2">
@@ -148,7 +149,7 @@ library(tidyr)
 library(feather)</code></pre>
 <p>Then, read in the data.</p>
 <ul>
-<li><p>It comes from the “Lahman” baseball database, so-named after the originator and hoster, Sean Lahman. <a href="http://www.seanlahman.com/baseball-archive/statistics/">His website</a> has the current version of the database, as well as an archive of previous versions.</p></li>
+<li><p>It comes from the “Lahman” baseball database, so-named after the originator and host, Sean Lahman. <a href="http://www.seanlahman.com/baseball-archive/statistics/">The website www.seanlahman.com</a> has the current version of the database, as well as an archive of previous versions.</p></li>
 <li><p>The data table “Teams” is sourced from the <em>baseballdatabank</em> on github <a href="https://github.com/chadwickbureau/baseballdatabank" class="uri">https://github.com/chadwickbureau/baseballdatabank</a>)); I’ve also saved in the github repo for this app.</p></li>
 <li><p>There is an <a href="https://github.com/cdalzell/Lahman">R package with the Lahman database</a>, but it’s currently two seasons behind the source files.</p></li>
 </ul>
@@ -351,10 +352,14 @@ Teams_lgyr</code></pre>
 <div id="iii.-save-lg_rpg-files" class="section level4">
 <h4>iii. save LG_RPG files</h4>
 <p>And then write csv and feather versions. As noted above, the shiny app now uses the <code>feather</code> format.</p>
+<p>Notes:</p>
 <ul>
-<li>note the renaming of variables to correspond with shiny app names.</li>
+<li><p>rounding of variables <em>after</em> all the calculations, simply to make the tables as viewed more legible.</p></li>
+<li><p>renaming of variables to correspond with shiny app names.</p></li>
 </ul>
 <pre class="r"><code>LG_RPG &lt;- Teams_lgyr %&gt;%
+  mutate(lgRPG = round(lgRPG, 2),
+         lgRAPG = round(lgRAPG, 2)) %&gt;%
   select(yearID, lgID, R = lgR, RA = lgRA, G = lgG, 
          leagueRPG = lgRPG, leagueRAPG = lgRAPG)
 
@@ -424,6 +429,8 @@ Teams_lgyr</code></pre>
 ## # ... with 108 more rows</code></pre>
 <p>And again, we save the files for use in the shiny app.</p>
 <pre class="r"><code>MLB_RPG &lt;- Teams_lgyr %&gt;%
+  mutate(mlbRPG = round(mlbRPG, 2),
+         mlbRAPG = round(mlbRAPG, 2)) %&gt;%
   select(yearID, R = mlbR, RA = mlbRA, G = mlbG, 
          leagueRPG = mlbRPG, leagueRAPG = mlbRAPG)
 
@@ -475,14 +482,22 @@ Teams_append</code></pre>
 ## #   teamIDretro &lt;chr&gt;, teamRPG &lt;dbl&gt;, teamRAPG &lt;dbl&gt;, WLpct &lt;dbl&gt;,
 ## #   R_index &lt;dbl&gt;, R_index.sd &lt;dbl&gt;, R_z &lt;dbl&gt;, RA_index &lt;dbl&gt;,
 ## #   RA_index.sd &lt;dbl&gt;, RA_z &lt;dbl&gt;</code></pre>
-<div id="i.-save-file-for-shiny-app" class="section level4">
-<p>
-<p>In this the final step, we first create a new data object <code>Teams_merge</code></p>
+<p>In this the final step, we first create a new data object <code>Teams_merge</code>.</p>
+<p>Notes:</p>
 <ul>
-<li><p>note selection and renaming of variables to correspond with shiny app names</p></li>
+<li><p>rounding of a variety of the calculated variables, to address readability concerns.</p></li>
+<li><p>selection and renaming of variables to correspond with shiny app names.</p></li>
 <li><p>then write csv and feather versions.</p></li>
 </ul>
 <pre class="r"><code>Teams_merge &lt;- Teams_append %&gt;%
+  mutate(lgRPG = round(lgRPG, 2),
+         lgRAPG = round(lgRAPG, 2),
+         WLpct = round(WLpct, 3),
+         teamRPG = round(teamRPG, 2),
+         teamRAPG = round(teamRAPG, 2),
+         R_index = round(R_index, 1),
+         RA_index = round(RA_index, 1)
+         ) %&gt;%
   select(yearID, lgID, franchID, teamID, name,
          W, L, WLpct, R.x = R, RA.x = RA, 
          teamRPG, leagueRPG = lgRPG, R_index,
@@ -494,10 +509,10 @@ Teams_merge</code></pre>
 ##     &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;    &lt;chr&gt;  &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
 ##  1   1901 AL    NYY      BLA    Balt~    68    65 0.511   760   750    5.71
 ##  2   1901 AL    BOS      BOS    Bost~    79    57 0.581   759   608    5.58
-##  3   1901 AL    CHW      CHA    Chic~    83    53 0.610   819   631    6.02
-##  4   1901 AL    CLE      CLE    Clev~    54    82 0.397   666   831    4.90
+##  3   1901 AL    CHW      CHA    Chic~    83    53 0.61    819   631    6.02
+##  4   1901 AL    CLE      CLE    Clev~    54    82 0.397   666   831    4.9 
 ##  5   1901 AL    DET      DET    Detr~    74    61 0.548   741   694    5.49
-##  6   1901 AL    BAL      MLA    Milw~    48    89 0.350   641   828    4.68
+##  6   1901 AL    BAL      MLA    Milw~    48    89 0.35    641   828    4.68
 ##  7   1901 AL    OAK      PHA    Phil~    74    62 0.544   805   760    5.92
 ##  8   1901 AL    MIN      WS1    Wash~    61    72 0.459   682   771    5.13
 ##  9   1901 NL    LAD      BRO    Broo~    79    57 0.581   744   600    5.47
@@ -508,7 +523,6 @@ Teams_merge</code></pre>
 write_feather(Teams_merge, &quot;Teams_merge.feather&quot;)</code></pre>
 <p>And the feather files can now be incorproated into the shiny app.</p>
 <p>-30-</p>
-</div>
 </div>
 </div>
 
@@ -541,3 +555,4 @@ $(document).ready(function () {
 </script>
 
 </body>
+</html>

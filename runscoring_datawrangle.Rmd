@@ -21,6 +21,7 @@ This update gave me the opportunity to make some cosmetic tweaks to the front en
 
 At one point in the app's code, I had used the now-retired [`reshape`](https://cran.r-project.org/web/packages/reshape/index.html) package to melt a data table. Although this still works, I opted to update the code to use the `gather()` function in the package `tidyr`, part of [the tidyverse](https://www.tidyverse.org/). 
 
+
 ## 2. `feather` instead of csv
 
 The app relied on some pre-wrangled csv files; these have been replaced by files stored using the [.feather format](https://blog.rstudio.com/2016/03/29/feather/), which makes for a signficant performance improvement. 
@@ -58,7 +59,7 @@ library(feather)
 
 Then, read in the data.
 
-- It comes from the "Lahman" baseball database, so-named after the originator and hoster, Sean Lahman. [His website](http://www.seanlahman.com/baseball-archive/statistics/) has the current version of the database, as well as an archive of previous versions.
+- It comes from the "Lahman" baseball database, so-named after the originator and host, Sean Lahman. [The website www.seanlahman.com](http://www.seanlahman.com/baseball-archive/statistics/) has the current version of the database, as well as an archive of previous versions.
 
 - The data table "Teams" is sourced from the _baseballdatabank_ on github https://github.com/chadwickbureau/baseballdatabank)); I've also saved in the github repo for this app.
 
@@ -248,12 +249,18 @@ Teams_lgyr
 
 And then write csv and feather versions. As noted above, the shiny app now uses the `feather` format.
 
-- note the renaming of variables to correspond with shiny app names.
+Notes:
+
+- rounding of variables _after_ all the calculations, simply to make the tables as viewed more legible.
+
+- renaming of variables to correspond with shiny app names.
 
 
 ```{r}
 
 LG_RPG <- Teams_lgyr %>%
+  mutate(lgRPG = round(lgRPG, 2),
+         lgRAPG = round(lgRAPG, 2)) %>%
   select(yearID, lgID, R = lgR, RA = lgRA, G = lgG, 
          leagueRPG = lgRPG, leagueRAPG = lgRAPG)
 
@@ -295,6 +302,8 @@ And again, we save the files for use in the shiny app.
 ```{r}
 
 MLB_RPG <- Teams_lgyr %>%
+  mutate(mlbRPG = round(mlbRPG, 2),
+         mlbRAPG = round(mlbRAPG, 2)) %>%
   select(yearID, R = mlbR, RA = mlbRA, G = mlbG, 
          leagueRPG = mlbRPG, leagueRAPG = mlbRAPG)
 
@@ -337,15 +346,27 @@ Teams_append
 
 
 
-In this the final step, we first create a new data object `Teams_merge`
+In this the final step, we first create a new data object `Teams_merge`.
 
-- note selection and renaming of variables to correspond with shiny app names
+Notes:
+
+- rounding of a variety of the calculated variables, to address readability concerns.
+
+- selection and renaming of variables to correspond with shiny app names.
 
 - then write csv and feather versions. 
 
 ```{r}
 
 Teams_merge <- Teams_append %>%
+  mutate(lgRPG = round(lgRPG, 2),
+         lgRAPG = round(lgRAPG, 2),
+         WLpct = round(WLpct, 3),
+         teamRPG = round(teamRPG, 2),
+         teamRAPG = round(teamRAPG, 2),
+         R_index = round(R_index, 1),
+         RA_index = round(RA_index, 1)
+         ) %>%
   select(yearID, lgID, franchID, teamID, name,
          W, L, WLpct, R.x = R, RA.x = RA, 
          teamRPG, leagueRPG = lgRPG, R_index,
