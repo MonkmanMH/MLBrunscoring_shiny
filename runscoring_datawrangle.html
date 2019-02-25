@@ -1,4 +1,4 @@
-<body>
+﻿<body>
 
 <style type="text/css">
 .main-container {
@@ -136,7 +136,7 @@ $(document).ready(function () {
 <p>In previous versions of the app, the filtering of rows (records or observations) and selecting of columns (variables), the calculation of each team’s average runs scored and runs allowed per game, the league average runs per game, and the comparison of the team to the league, was done first using base R’s <code>apply</code> family of functions.</p>
 <p>Then I switched to using <code>dplyr</code>, and although the steps were now in a pipe, this approach still required creating a separate data table with the league average, and then joining that table back into the main team table so that the team result could be compared to the league average.</p>
 <p>For this iteration, preparing the data for the app is now done using <code>tidyr::nest()</code> and <code>purrr::map()</code>. What follows is a detailed explanation of how I approached this.</p>
-<p>It’s always valuable to have your end-state in mind when working through a multi-step data wrangle like this. My goal as the values shown on the “team plot” tab of the app – an index value (i.e. a percentage) of a team’s average runs scored (and runs allowed) compared to the league run scoring rate, for a single season.</p>
+<p>It’s always valuable to have your end-state in mind when working through a multi-step data wrangle like this. My goal is the values shown on the “team plot” tab of the app – an index value (i.e. a percentage) of a team’s average runs scored (and runs allowed) compared to the league run scoring rate, for a single season.</p>
 <div id="a.-load-packages-and-read-the-data" class="section level3">
 <h3>a. Load packages and read the data</h3>
 <p>First, load the necessary packages, the first four of which are part of the tidyverse.</p>
@@ -191,7 +191,7 @@ head(Teams)</code></pre>
 <p>the calculations are conducted here. This will vastly improve the performance of the app.</p>
 <div id="i.-create-nested-table" class="section level4">
 <h4>i. create nested table</h4>
-<p>I started with the “Many Models”&quot; chapter of Wickham and Grolemund, <a href="https://r4ds.had.co.nz/many-models.html">R for Data Science</a>. (And thanks to Dr. Charlotte Wickham, whose training course was invaliable in helping me wrap my head around this.)</p>
+<p>I started with the “Many Models”&quot; chapter of Wickham and Grolemund, <a href="https://r4ds.had.co.nz/many-models.html">R for Data Science</a>. (And thanks to Dr. Charlotte Wickham, whose training course was invaluable in helping me wrap my head around this.)</p>
 <p>At this point, the code</p>
 <ul>
 <li><p>filters out the years prior to 1901 and <a href="https://en.wikipedia.org/wiki/Federal_League">the misbegotten Federal League</a>.</p></li>
