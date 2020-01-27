@@ -1,12 +1,12 @@
 ---
 title: "Run scoring trends - references"
 author: "Martin Monkman"
-date: "2019-02-18"
+date: "2020-01-26"
 output: html_document
 ---
 
 ## Major League Baseball run scoring trends
-### Version 4.00 (2019-02-18)
+### Version 5.00 (2020-01-25)
 ### Documentation
 
 This app was written by Martin Monkman using the R package [Shiny](http://shiny.rstudio.com/).
@@ -18,7 +18,7 @@ at [MonkmanMH/Bayesball/MLBrunscoring_shiny](https://github.com/MonkmanMH/Bayesb
 
 **LICENSE:**
 
-This application is copyright 2019 Martin Monkman
+This application is copyright Martin Monkman
 and is licensed under the MIT License  https://opensource.org/licenses/MIT
 
 

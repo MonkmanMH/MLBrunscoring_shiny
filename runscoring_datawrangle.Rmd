@@ -1,43 +1,31 @@
 ---
 title: "MLB run scoring trends: data wrangle"
 author: "Martin Monkman"
-date: "February 24, 2019"
+date: "January 26, 2020"
 output: html_document
 ---
 
 
 
-The new Major League Baseball season will soon begin, which means it's time to look back and update my run scoring trends data visualization application, built using RStudio's shiny package.
+This note provides a description of the steps I took to update my run scoring trends data visualization application, built using RStudio's shiny package.
 
 You can find the app here:
 [https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/](https://monkmanmh.shinyapps.io/MLBrunscoring_shiny/)
 
 The github repo for this app is [https://github.com/MonkmanMH/Bayesball/tree/master/MLBrunscoring_shiny](https://github.com/MonkmanMH/Bayesball/tree/master/MLBrunscoring_shiny)
 
-This update gave me the opportunity to make some cosmetic tweaks to the front end, and more consequential changes to the code under the hood.
+This update gave me the opportunity to make some more cosmetic tweaks to the front end, and some subtle changes to the code under the hood.
 
 
-## 1. retired `reshape`, using `tidyr`
-
-At one point in the app's code, I had used the now-retired [`reshape`](https://cran.r-project.org/web/packages/reshape/index.html) package to melt a data table. Although this still works, I opted to update the code to use the `gather()` function in the package `tidyr`, part of [the tidyverse](https://www.tidyverse.org/). 
+My previous update switched from using the [{reshape}](https://cran.r-project.org/web/packages/reshape/index.html) package, and moved to [{tidyr}](https://tidyr.tidyverse.org/), part of [the tidyverse](https://www.tidyverse.org/). 
 
 
-## 2. `feather` instead of csv
 
-The app relied on some pre-wrangled csv files; these have been replaced by files stored using the [.feather format](https://blog.rstudio.com/2016/03/29/feather/), which makes for a signficant performance improvement. 
+## 2. wrangling: the calculation of team and league run scoring averages
 
+The goal is to create data tables that minimize the amount of processing the app has to do. What follows is a detailed explanation of how I approached this. 
 
-## 3. wrangling: the calculation of team and league run scoring averages
-
-The goal is to create data tables that minimize the amount of processing the app has to do. 
-
-In previous versions of the app, the filtering of rows (records or observations) and selecting of columns (variables), the calculation of each team's average runs scored and runs allowed per game, the league average runs per game, and the comparison of the team to the league, was done first using base R's `apply` family of functions.
-
-Then I switched to using `dplyr`, and although the steps were now in a pipe, this approach still required creating a separate data table with the league average, and then joining that table back into the main team table so that the team result could be compared to the league average.
-
-For this iteration, preparing the data for the app is now done using `tidyr::nest()` and `purrr::map()`. What follows is a detailed explanation of how I approached this. 
-
-It's always valuable to have your end-state in mind when working through a multi-step data wrangle like this. My goal as the values shown on the "team plot" tab of the app -- an index value (i.e. a percentage) of a team's average runs scored (and runs allowed) compared to the league run scoring rate, for a single season.
+It's always valuable to have your end-state in mind when working through a multi-step data wrangle like this. My goal is the values shown on the "team plot" tab of the app&mdash;an index value (i.e. a percentage) of a team's average runs scored (and runs allowed) compared to the league run scoring rate, for a single season.
 
 
 ### a. Load packages and read the data
@@ -45,7 +33,7 @@ It's always valuable to have your end-state in mind when working through a multi
 
 First, load the necessary packages, the first four of which are part of the tidyverse.
 
-```{r warning=FALSE, message=FALSE}
+```{r setup, warning=FALSE, message=FALSE}
 
 # tidyverse packages
 library(dplyr)
@@ -61,9 +49,9 @@ Then, read in the data.
 
 - It comes from the "Lahman" baseball database, so-named after the originator and host, Sean Lahman. [The website www.seanlahman.com](http://www.seanlahman.com/baseball-archive/statistics/) has the current version of the database, as well as an archive of previous versions.
 
-- The data table "Teams" is sourced from the _baseballdatabank_ on github https://github.com/chadwickbureau/baseballdatabank)); I've also saved in the github repo for this app.
+- The data table "Teams" is sourced from [the _baseballdatabank_ on github] (https://github.com/chadwickbureau/baseballdatabank); I've also saved the file in the github repo for this app.
 
-- There is an [R package with the Lahman database](https://github.com/cdalzell/Lahman), but it's currently two seasons behind the source files.
+- There is an [R package with the Lahman database](https://github.com/cdalzell/Lahman), but beware: the data in the CRAN version does not have the most recent season.
 
 
 ```{r}
@@ -76,7 +64,7 @@ Teams <- read_csv("Teams.csv",
                     WCWin = col_character()
                   ))
 
-head(Teams)
+Teams
 
 ```
 
@@ -108,7 +96,7 @@ At this point, the code
 
 - filters out the years prior to 1901 and [the misbegotten Federal League](https://en.wikipedia.org/wiki/Federal_League).
 
-- and then creates a nested data table, starting with the `group_by()` year and league (`lgID`)
+- and then creates a nested data table, starting with the `group_by()` year and league (`lgID`). This table has three columns: the year, the league, and then the third column is a tibble, itself containing all the variables for each team.
 
 
 ```{r}
@@ -137,7 +125,7 @@ Teams_lgyr$data[[1]]
 
 #### ii - functional programming
 
-This step creates a league run scoring function, and then applies that using the `purrr::map()` function.
+This step creates a league run scoring function, and then applies that to each tibble in the `data` column, using the `purrr::map()` function.
 
 **Note:**
 
@@ -152,11 +140,8 @@ First, a simple test, calculating runs scored, and checking to see if we got the
 leagueRuns_fun <- function(df) {
   sum(data = df$R)
 }
-
 league_year_runs <- map(Teams_lgyr$data, leagueRuns_fun)
-
 league_year_runs[[1]]
-
 #check the answer by old school `dplyr` method
 Teams %>%
   filter(yearID == 1901,
@@ -164,7 +149,6 @@ Teams %>%
   summarise(leagueruns = sum(R))
 
 ```
-
 
 Now we move on to the calculation of league averages.
 
@@ -183,23 +167,16 @@ For the first approach, the sum calculation is part of the function.
 leagueRPG_fun <- function(df) {
   sum(data = df$R) / (sum(data = df$W) + sum(data = df$L))
   }
-
 leagueRAPG_fun <- function(df) {
   sum(data = df$RA) / (sum(data = df$W) + sum(data = df$L))
   }
-
-
 # simple `map` version
 league_year_RPG <- map(Teams_lgyr$data, leagueRPG_fun)
-
 # embed as new columns in nested data object
 Teams_lgyr <- Teams_lgyr %>%
   mutate(lgRPG = map_dbl(Teams_lgyr$data, leagueRPG_fun),
          lgRAPG = map_dbl(Teams_lgyr$data, leagueRAPG_fun))
-
 Teams_lgyr
-
-
 
 ```
 

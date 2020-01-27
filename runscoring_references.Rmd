@@ -1,7 +1,7 @@
 ---
 title: "Run scoring trends - references"
 author: "Martin Monkman"
-date: "2019-02-18"
+date: "2020-01-26"
 output: html_document
 ---
 
@@ -11,6 +11,8 @@ output: html_document
 #### bayesball.blogspot.com
 
 Earlier versions of the analysis of run scoring trends in Major League Baseball can be found on my blog [bayesball.blogspot.com](bayesball.blogspot.com).  In reverse order of publication, they are:
+
+* ["MLB run scoring trends: Shiny app update"](http://bayesball.blogspot.com/2019/02/mlb-run-scoring-trends-shiny-app-update.html), 2019-02-25
 
 * ["Updated Shiny app"](http://bayesball.blogspot.com/2017/03/updated-shiny-app.html), 2017-03-26
 
